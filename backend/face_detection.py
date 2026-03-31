@@ -71,7 +71,8 @@ class FaceDetector:
         self._frame_counter = 0                   # Frame sayacı
         self._cached_bboxes = None                # Cache'lenmiş bbox'lar
         self._detection_downscale = detection_downscale  # Küçültme oranı
-        self._timestamp_ms = 0                    # VIDEO modu için artan timestamp
+        # VIDEO modu için gerçek zamanlı timestamp kullanıyoruz
+        # (monotonically increasing — oturumlar arası sorun yaşanmaz)
 
         print(
             f"[FaceDetector] Başlatıldı — VIDEO modu, "
@@ -105,10 +106,12 @@ class FaceDetector:
         # ─── MediaPipe Image ─── (numpy doğrudan — kopyalama yok)
         mp_image = mp.Image(image_format=mp.ImageFormat.SRGB, data=rgb_frame)
 
-        # ─── VIDEO modu: artan timestamp gerekir ───
-        self._timestamp_ms += 33  # ~30fps simülasyon (her çağrıda +33ms)
+        # ─── VIDEO modu: kesin artan (monotonically increasing) timestamp gerekir ───
+        # Sayaç yerine gerçek zaman kullanıyoruz — böylece reset_cache()
+        # sonrasında da timestamp asla geriye gitmez.
+        timestamp_ms = int(time.time() * 1000)
         detection_result = self.detector.detect_for_video(
-            mp_image, self._timestamp_ms
+            mp_image, timestamp_ms
         )
 
         bboxes = []
@@ -194,7 +197,7 @@ class FaceDetector:
         """Yeni stream başlatıldığında cache'i sıfırla."""
         self._cached_bboxes = None
         self._frame_counter = 0
-        self._timestamp_ms = 0
+        # NOT: timestamp artık time.time() tabanlı — sıfırlama gerekmiyor
 
     def __del__(self):
         """Temizlik."""

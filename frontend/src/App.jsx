@@ -49,6 +49,7 @@ function App() {
   const frameCountRef = useRef(0);
   const fpsTimerRef = useRef(null);
   const selectedModelRef = useRef(null);  // Interval içinde güncel model
+  const startingRef = useRef(false);     // Çift tıklama koruması
 
   // ─── selectedModel değiştiğinde ref'i güncelle ───
   useEffect(() => {
@@ -90,7 +91,45 @@ function App() {
   }, []);
 
   /**
+   * Mevcut kaynakları temizle (yeniden başlatmadan önce veya durdururken)
+   */
+  const cleanup = useCallback(() => {
+    // ─── Frame yakalamayı durdur ───
+    if (intervalRef.current) {
+      clearInterval(intervalRef.current);
+      intervalRef.current = null;
+    }
+
+    // ─── WebSocket kapat ───
+    if (wsRef.current) {
+      wsRef.current.onopen = null;
+      wsRef.current.onmessage = null;
+      wsRef.current.onclose = null;
+      wsRef.current.onerror = null;
+      wsRef.current.close();
+      wsRef.current = null;
+    }
+
+    // ─── Kamera stream'ini kapat ───
+    if (streamRef.current) {
+      streamRef.current.getTracks().forEach(track => track.stop());
+      streamRef.current = null;
+    }
+
+    // ─── Videoyu temizle ───
+    if (videoRef.current) {
+      videoRef.current.pause();
+      videoRef.current.onloadedmetadata = null;
+      videoRef.current.srcObject = null;
+    }
+
+    stopFpsCounter();
+    waitingRef.current = false;
+  }, [stopFpsCounter]);
+
+  /**
    * WebSocket bağlantısı kur
+   * @returns {WebSocket} oluşturulan WebSocket nesnesi
    */
   const connectWebSocket = useCallback(() => {
     setConnectionStatus('connecting');
@@ -165,6 +204,11 @@ function App() {
    * Kameradan frame yakala ve WebSocket üzerinden gönder
    */
   const startFrameCapture = useCallback(() => {
+    // ─── Önceki interval varsa temizle ───
+    if (intervalRef.current) {
+      clearInterval(intervalRef.current);
+    }
+
     const canvas = document.createElement('canvas');
     const ctx = canvas.getContext('2d');
 
@@ -174,6 +218,9 @@ function App() {
 
       // Hazır değilse atla
       if (!video || !ws || ws.readyState !== WebSocket.OPEN) return;
+
+      // Video boyutları hazır değilse atla
+      if (video.videoWidth === 0 || video.videoHeight === 0) return;
 
       // Back-pressure: önceki yanıt gelmemişse atla
       if (waitingRef.current) return;
@@ -198,10 +245,25 @@ function App() {
 
   /**
    * Kamerayı başlat
+   *
+   * <video> elementi her zaman DOM'da olduğu için (display:none ile gizli)
+   * videoRef.current asla null olmaz. Bu sayede stream'i doğrudan
+   * handleStart içinde bağlayabiliyoruz.
+   *
+   * NOT: onloadedmetadata ikinci açılışta tetiklenmeyebilir.
+   * Bu yüzden video.play().then() kullanıyoruz — video gerçekten
+   * oynatılmaya başladığında frame capture'ı başlatır.
    */
   const handleStart = useCallback(async () => {
+    // ─── Çift tıklama koruması ───
+    if (startingRef.current) return;
+    startingRef.current = true;
+
     try {
-      // ─── WebSocket'i hemen bağla (kamerayla paralel) ───
+      // ─── Önceki kaynakları temizle (tekrar başlatma durumu) ───
+      cleanup();
+
+      // ─── WebSocket bağlantısını başlat (kamerayla paralel — bağlanma süresi kazanır) ───
       connectWebSocket();
 
       // ─── Kamera erişimi iste ───
@@ -216,67 +278,59 @@ function App() {
 
       streamRef.current = stream;
 
-      // ─── Video elementine bağla ───
-      if (videoRef.current) {
-        videoRef.current.srcObject = stream;
+      // ─── State'leri sıfırla ───
+      waitingRef.current = false;
+      setHistory([]);
+      setFaces([]);
 
-        // ─── Video hazır olduğunda frame yakalamayı başlat ───
-        videoRef.current.onloadedmetadata = () => {
-          startFrameCapture();
-          startFpsCounter();
-        };
+      // ─── Video elementine stream'i doğrudan bağla ───
+      const video = videoRef.current;
+      if (video) {
+        video.srcObject = stream;
+
+        // ─── video.play() her zaman güvenilir şekilde çalışır ───
+        // onloadedmetadata ikinci açılışta tetiklenmeyebilir,
+        // ancak play().then() video gerçekten oynatıldığında çözümlenir.
+        try {
+          await video.play();
+        } catch (playErr) {
+          console.warn('[Video] Autoplay engellendi, kullanıcı etkileşimi bekleniyor:', playErr);
+        }
+
+        // ─── Video oynatılıyor — frame capture başlat ───
+        startFrameCapture();
+        startFpsCounter();
       }
 
       setIsActive(true);
-      setHistory([]);
     } catch (err) {
       console.error('[Kamera] Erişim hatası:', err);
       alert('Kameraya erişilemedi. Lütfen tarayıcı izinlerini kontrol edin.');
+    } finally {
+      startingRef.current = false;
     }
-  }, [connectWebSocket, startFrameCapture, startFpsCounter]);
+  }, [cleanup, connectWebSocket, startFrameCapture, startFpsCounter]);
+
 
   /**
    * Kamerayı durdur
    */
   const handleStop = useCallback(() => {
-    // ─── Frame yakalamayı durdur ───
-    if (intervalRef.current) {
-      clearInterval(intervalRef.current);
-      intervalRef.current = null;
-    }
-
-    // ─── WebSocket kapat ───
-    if (wsRef.current) {
-      wsRef.current.close();
-      wsRef.current = null;
-    }
-
-    // ─── Kamera stream'ini kapat ───
-    if (streamRef.current) {
-      streamRef.current.getTracks().forEach(track => track.stop());
-      streamRef.current = null;
-    }
-
-    // ─── Videoyu temizle ───
-    if (videoRef.current) {
-      videoRef.current.srcObject = null;
-    }
-
-    stopFpsCounter();
+    cleanup();
     setIsActive(false);
     setFaces([]);
     setConnectionStatus('disconnected');
-    waitingRef.current = false;
-  }, [stopFpsCounter]);
+  }, [cleanup]);
 
   /**
    * Bileşen temizliği (unmount)
    */
   useEffect(() => {
     return () => {
-      handleStop();
+      cleanup();
     };
-  }, [handleStop]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   // ─── Connection status text ───
   const statusText = {

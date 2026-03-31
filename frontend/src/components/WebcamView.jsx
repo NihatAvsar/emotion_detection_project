@@ -11,6 +11,10 @@
  *   fps       — Anlık FPS değeri
  *   onStart   — Kamerayı başlat callback
  *   onStop    — Kamerayı durdur callback
+ *
+ * ÖNEMLİ: <video> elementi her zaman DOM'da kalır (display:none ile gizlenir).
+ * Bu sayede videoRef.current her zaman geçerlidir ve stream bağlama
+ * işlemi asla null ref sorunu yaşamaz.
  */
 
 import { useRef, useEffect } from 'react';
@@ -144,29 +148,38 @@ export default function WebcamView({ videoRef, faces, isActive, fps, onStart, on
       </div>
       <div className="card-body" style={{ padding: 0 }}>
         <div className="webcam-container">
-          {isActive ? (
-            <>
-              <video
-                ref={videoRef}
-                autoPlay
-                playsInline
-                muted
-                style={{ transform: 'scaleX(-1)' }}
-              />
-              <canvas
-                ref={canvasRef}
-                style={{ transform: 'scaleX(-1)' }}
-              />
-              {fps > 0 && (
-                <div className="fps-counter">{fps} FPS</div>
-              )}
-              {faces && faces.length === 0 && (
-                <div className="no-face-overlay">
-                  😶 Yüz tespit edilemiyor...
-                </div>
-              )}
-            </>
-          ) : (
+          {/*
+            ÖNEMLİ: <video> her zaman DOM'da kalır.
+            isActive false iken display:none ile gizlenir.
+            Bu sayede videoRef.current asla null olmaz ve
+            stream bağlama işlemi sorunsuz çalışır.
+          */}
+          <video
+            ref={videoRef}
+            autoPlay
+            playsInline
+            muted
+            style={{
+              transform: 'scaleX(-1)',
+              display: isActive ? 'block' : 'none',
+            }}
+          />
+          <canvas
+            ref={canvasRef}
+            style={{
+              transform: 'scaleX(-1)',
+              display: isActive ? 'block' : 'none',
+            }}
+          />
+          {isActive && fps > 0 && (
+            <div className="fps-counter">{fps} FPS</div>
+          )}
+          {isActive && faces && faces.length === 0 && (
+            <div className="no-face-overlay">
+              😶 Yüz tespit edilemiyor...
+            </div>
+          )}
+          {!isActive && (
             <div className="webcam-placeholder">
               <div className="camera-icon">📷</div>
               <p>Kameraya erişim için başlatın</p>
