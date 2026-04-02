@@ -1,27 +1,27 @@
-# 🎭 Gerçek Zamanlı Yüz Duygu Analizi
+# Gerçek Zamanlı Yüz Duygu Analizi
 
-> **ConvNeXt Tiny** + **MediaPipe** ile gerçek zamanlı duygu tanıma web uygulaması.
+> **CNN Modelleri** + **MediaPipe** ile gerçek zamanlı duygu tanıma web uygulaması.
 
-## 🏗️ Mimari
+## Mimari
 
 ```
-┌──────────────┐    WebSocket    ┌──────────────────┐
+┌──────────────┐    WebSocket   ┌──────────────────┐
 │   Frontend   │ ◄════════════► │     Backend      │
 │  React+Vite  │   base64 JPEG  │     FastAPI      │
 │              │   ◄── JSON ──  │                  │
 │ • Kamera     │                │ • MediaPipe      │
-│ • Bbox çizim │                │ • ConvNeXt Tiny  │
+│ • Bbox çizim │                │ • CNN Modelleri  │
 │ • Grafikler  │                │ • PyTorch        │
 └──────────────┘                └──────────────────┘
 ```
 
-## 📋 Gereksinimler
+## Gereksinimler
 
 - **Python** 3.9+
 - **Node.js** 18+
 - **GPU** (opsiyonel — CPU'da da çalışır)
 
-## 🚀 Kurulum & Çalıştırma
+## Kurulum & Çalıştırma
 
 ### 1. Backend
 
@@ -63,7 +63,7 @@ npm run dev
 3. Kamera izni verin
 4. Gerçek zamanlı duygu analizi başlar!
 
-## 🎯 Duygu Sınıfları
+## Duygu Sınıfları
 
 | Duygu | Türkçe | Emoji |
 |-------|--------|-------|
@@ -73,7 +73,7 @@ npm run dev
 | surprised | Şaşkın | 😲 |
 | neutral | Nötr | 😐 |
 
-## 📁 Proje Yapısı
+## Proje Yapısı
 
 ```
 duygu_proje/
