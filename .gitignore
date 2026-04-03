@@ -1,0 +1,16 @@
+# Root .gitignore for emotion_detection_project
+
+# Python
+backend/__pycache__/
+backend/venv/
+backend/*.pyc
+
+# Models
+backend/models/
+backend/convnext_tiny_best.pth
+
+# Node/React
+frontend/node_modules/
+frontend/dist/
+frontend/dist-ssr/
+frontend/*.local
