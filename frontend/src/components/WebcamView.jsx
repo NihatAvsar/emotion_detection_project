@@ -57,7 +57,7 @@ export default function WebcamView({ videoRef, faces, isActive, fps, onStart, on
     if (!faces || faces.length === 0) return;
 
     faces.forEach((face) => {
-      const { face_bbox, emotion, confidence } = face;
+      const { face_bbox, emotion, confidence, face_id } = face;
       if (!face_bbox) return;
 
       // ─── Normalize koordinatları piksele çevir ───
@@ -69,6 +69,7 @@ export default function WebcamView({ videoRef, faces, isActive, fps, onStart, on
       const color = EMOTION_COLORS[emotion] || '#ffffff';
       const label = EMOTION_LABELS[emotion] || emotion;
       const conf = Math.round(confidence * 100);
+      const idLabel = face_id ? `#${face_id} ` : '';
 
       // ─── Glow efekti ───
       ctx.shadowColor = color;
@@ -117,7 +118,7 @@ export default function WebcamView({ videoRef, faces, isActive, fps, onStart, on
       ctx.globalAlpha = 1;
 
       // ─── Etiket arka planı ───
-      const text = `${label}  ${conf}%`;
+      const text = `${idLabel}${label}  ${conf}%`;
       ctx.font = 'bold 14px Inter, sans-serif';
       const textMetrics = ctx.measureText(text);
       const textW = textMetrics.width + 16;

@@ -197,8 +197,16 @@ def process_frame(frame: np.ndarray, model_name: str = None) -> dict:
             },
         })
 
+    # ─── Yüzleri soldan sağa sırala (ekrandaki konuma göre tutarlı sıra) ───
+    results.sort(key=lambda f: f["face_bbox"]["x"])
+
+    # ─── Her yüze face_id ata (1'den başlayarak, soldan sağa) ───
+    for idx, face in enumerate(results):
+        face["face_id"] = idx + 1
+
     return {
         "success": True,
+        "face_count": len(results),
         "faces": results,
         "model_used": model_name or "default",
         "timestamp": time.time(),

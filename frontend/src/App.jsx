@@ -20,6 +20,7 @@ import EmotionPanel from './components/EmotionPanel';
 import ProbabilityBar from './components/ProbabilityBar';
 import EmotionTimeline from './components/EmotionTimeline';
 import ModelSelector from './components/ModelSelector';
+import FaceListPanel from './components/FaceListPanel';
 
 // ─── Sabitler ───
 const WS_URL = 'ws://localhost:8000/ws/predict';
@@ -33,8 +34,7 @@ function App() {
   const [isActive, setIsActive] = useState(false);              // Kamera açık mı?
   const [connectionStatus, setConnectionStatus] = useState('disconnected'); // ws durumu
   const [faces, setFaces] = useState([]);                       // Tespit edilen yüzler
-  const [dominantEmotion, setDominantEmotion] = useState(null); // Baskın duygu
-  const [probabilities, setProbabilities] = useState(null);     // Olasılıklar
+  const [selectedFaceIndex, setSelectedFaceIndex] = useState(0); // Seçili yüz index'i
   const [history, setHistory] = useState([]);                   // Zaman çizelgesi
   const [fps, setFps] = useState(0);                            // FPS sayacı
   const [availableModels, setAvailableModels] = useState([]);   // Model listesi
@@ -150,17 +150,13 @@ function App() {
           // ─── Yüz verileri ───
           setFaces(data.faces);
 
-          // ─── Baskın duygu (ilk yüz) ───
-          const primary = data.faces[0];
-          setDominantEmotion({
-            emotion: primary.emotion,
-            emotion_tr: primary.emotion_tr,
-            emoji: primary.emoji,
-            confidence: primary.confidence,
-          });
-          setProbabilities(primary.probabilities);
+          // ─── Seçili index sınır kontrolü ───
+          setSelectedFaceIndex(prev =>
+            prev >= data.faces.length ? 0 : prev
+          );
 
-          // ─── Zaman çizelgesine ekle ───
+          // ─── Zaman çizelgesine ekle (ilk yüzün verileri) ───
+          const primary = data.faces[0];
           setHistory(prev => {
             const newPoint = {
               timestamp: Date.now(),
@@ -282,6 +278,7 @@ function App() {
       waitingRef.current = false;
       setHistory([]);
       setFaces([]);
+      setSelectedFaceIndex(0);
 
       // ─── Video elementine stream'i doğrudan bağla ───
       const video = videoRef.current;
@@ -339,6 +336,9 @@ function App() {
     disconnected: 'Bağlı Değil',
   };
 
+  // ─── Seçili yüzün verileri ───
+  const selectedFace = faces.length > 0 ? faces[selectedFaceIndex] || faces[0] : null;
+
   return (
     <div className="app-container">
       {/* ─── Header ─── */}
@@ -372,13 +372,18 @@ function App() {
             onModelChange={setSelectedModel}
             models={availableModels}
           />
-          <EmotionPanel
-            emotion={dominantEmotion?.emotion}
-            confidence={dominantEmotion?.confidence}
-            emoji={dominantEmotion?.emoji}
-            emotionTr={dominantEmotion?.emotion_tr}
+          <FaceListPanel
+            faces={faces}
+            selectedFaceIndex={selectedFaceIndex}
+            onSelectFace={setSelectedFaceIndex}
           />
-          <ProbabilityBar probabilities={probabilities} />
+          <EmotionPanel
+            emotion={selectedFace?.emotion}
+            confidence={selectedFace?.confidence}
+            emoji={selectedFace?.emoji}
+            emotionTr={selectedFace?.emotion_tr}
+          />
+          <ProbabilityBar probabilities={selectedFace?.probabilities || null} />
         </div>
       </div>
 
