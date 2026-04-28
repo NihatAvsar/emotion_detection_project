@@ -5,6 +5,10 @@ backend/__pycache__/
 backend/venv/
 backend/*.pyc
 
+# .env files
+.env
+backend/.env
+
 # Models
 backend/models/
 backend/convnext_tiny_best.pth

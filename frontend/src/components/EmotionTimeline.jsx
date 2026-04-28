@@ -1,8 +1,8 @@
 /**
- * EmotionTimeline Bileşeni
+ * EmotionTimeline Bileseni
  * =========================
- * Son 30 saniyenin duygu geçmişini çizgi grafiği olarak gösterir.
- * Canvas API kullanılarak her duygu için ayrı renkli çizgi çizilir.
+ * Son 30 saniyenin duygu gecmisini cizgi grafigi olarak gosterir.
+ * Canvas API kullanilarak her duygu icin ayri renkli cizgi cizilir.
  *
  * Props:
  *   history — Array of { timestamp, probabilities: { happy, sad, ... } }
@@ -11,7 +11,7 @@
 import { useRef, useEffect } from 'react';
 
 // ─── Duygu renkleri ve etiketleri ───
-const EMOTIONS = [
+const DUYGULAR = [
   { key: 'happy',     color: '#fbbf24', label: 'Mutlu' },
   { key: 'sad',       color: '#60a5fa', label: 'Üzgün' },
   { key: 'angry',     color: '#ef4444', label: 'Kızgın' },
@@ -29,49 +29,49 @@ export default function EmotionTimeline({ history }) {
     const ctx = canvas.getContext('2d');
     const dpr = window.devicePixelRatio || 1;
 
-    // ─── HiDPI canvas ayarı ───
+    // ─── HiDPI canvas ayari ───
     const rect = canvas.getBoundingClientRect();
     canvas.width = rect.width * dpr;
     canvas.height = rect.height * dpr;
     ctx.scale(dpr, dpr);
 
-    const W = rect.width;
-    const H = rect.height;
-    const padTop = 8;
-    const padBottom = 8;
-    const padLeft = 4;
-    const padRight = 4;
+    const G = rect.width;
+    const Y = rect.height;
+    const ustBosluk = 8;
+    const altBosluk = 8;
+    const solBosluk = 4;
+    const sagBosluk = 4;
 
-    const graphW = W - padLeft - padRight;
-    const graphH = H - padTop - padBottom;
+    const grafikG = G - solBosluk - sagBosluk;
+    const grafikY = Y - ustBosluk - altBosluk;
 
     // ─── Arka plan (saydam) ───
-    ctx.clearRect(0, 0, W, H);
+    ctx.clearRect(0, 0, G, Y);
 
-    // ─── Grid çizgileri ───
+    // ─── Grid cizgileri ───
     ctx.strokeStyle = 'rgba(255, 255, 255, 0.05)';
     ctx.lineWidth = 1;
     for (let i = 0; i <= 4; i++) {
-      const y = padTop + (graphH / 4) * i;
+      const y = ustBosluk + (grafikY / 4) * i;
       ctx.beginPath();
-      ctx.moveTo(padLeft, y);
-      ctx.lineTo(padLeft + graphW, y);
+      ctx.moveTo(solBosluk, y);
+      ctx.lineTo(solBosluk + grafikG, y);
       ctx.stroke();
     }
 
     if (!history || history.length < 2) {
-      // ─── Veri yok mesajı ───
+      // ─── Veri yok mesaji ───
       ctx.fillStyle = 'rgba(255, 255, 255, 0.15)';
       ctx.font = '13px Inter, sans-serif';
       ctx.textAlign = 'center';
-      ctx.fillText('Veri bekleniyor...', W / 2, H / 2);
+      ctx.fillText('Veri bekleniyor...', G / 2, Y / 2);
       return;
     }
 
-    // ─── Her duygu için çizgi çiz ───
-    const dataLen = history.length;
+    // ─── Her duygu icin cizgi ciz ───
+    const veriUzunlugu = history.length;
 
-    EMOTIONS.forEach(({ key, color }) => {
+    DUYGULAR.forEach(({ key, color }) => {
       ctx.strokeStyle = color;
       ctx.lineWidth = 2;
       ctx.lineJoin = 'round';
@@ -80,10 +80,10 @@ export default function EmotionTimeline({ history }) {
 
       ctx.beginPath();
 
-      for (let i = 0; i < dataLen; i++) {
-        const x = padLeft + (i / (dataLen - 1)) * graphW;
-        const val = history[i].probabilities?.[key] || 0;
-        const y = padTop + graphH - val * graphH;
+      for (let i = 0; i < veriUzunlugu; i++) {
+        const x = solBosluk + (i / (veriUzunlugu - 1)) * grafikG;
+        const deger = history[i].probabilities?.[key] || 0;
+        const y = ustBosluk + grafikY - deger * grafikY;
 
         if (i === 0) {
           ctx.moveTo(x, y);
@@ -94,15 +94,15 @@ export default function EmotionTimeline({ history }) {
 
       ctx.stroke();
 
-      // ─── Son noktaya küçük daire ───
-      const lastVal = history[dataLen - 1].probabilities?.[key] || 0;
-      const lastX = padLeft + graphW;
-      const lastY = padTop + graphH - lastVal * graphH;
+      // ─── Son noktaya kucuk daire ───
+      const sonDeger = history[veriUzunlugu - 1].probabilities?.[key] || 0;
+      const sonX = solBosluk + grafikG;
+      const sonY = ustBosluk + grafikY - sonDeger * grafikY;
 
       ctx.globalAlpha = 1;
       ctx.fillStyle = color;
       ctx.beginPath();
-      ctx.arc(lastX, lastY, 3, 0, Math.PI * 2);
+      ctx.arc(sonX, sonY, 3, 0, Math.PI * 2);
       ctx.fill();
     });
 
@@ -123,7 +123,7 @@ export default function EmotionTimeline({ history }) {
           />
         </div>
         <div className="timeline-legend">
-          {EMOTIONS.map(({ key, color, label }) => (
+          {DUYGULAR.map(({ key, color, label }) => (
             <div className="legend-item" key={key}>
               <span className="legend-dot" style={{ background: color }} />
               {label}

@@ -1,21 +1,21 @@
 """
-Model Registry — Çoklu Model Yönetimi
+Model Registry — Coklu Model Yonetimi
 =======================================
-backend/models/ dizinindeki tüm .pth model dosyalarını tarar,
-kaydeder ve lazy-loading ile yükler.
+backend/models/ dizinindeki tum .pth model dosyalarini tarar,
+kaydeder ve lazy-loading ile yukler.
 
-Özellikler:
-- Otomatik dizin tarama (alt klasörler + kök .pth dosyaları)
-- Klasör adından timm model ismi çıkarma
-- Lazy loading: model ilk kullanımda yüklenir, sonra cache'den döner
-- Thread-safe model erişimi
+Ozellikler:
+- Otomatik dizin tarama (alt klasorler + kok .pth dosyalari)
+- Klasor adindan timm model ismi cikarma
+- Lazy loading: model ilk kullanimda yuklenir, sonra cache'den doner
+- Thread-safe model erisimi
 
-Kullanım:
-    registry = ModelRegistry("backend/models")
-    registry.scan()
-    models = registry.list_models()
-    predictor = registry.get_model("resnet18")
-    result = predictor.predict(face_image)
+Kullanim:
+    kayit_defteri = ModelRegistry("backend/models")
+    kayit_defteri.tara()
+    modeller = kayit_defteri.modelleri_listele()
+    tahminleyici = kayit_defteri.model_getir("resnet18")
+    sonuc = tahminleyici.predict(yuz_goruntusu)
 """
 
 import os
@@ -24,10 +24,8 @@ import threading
 from model import EmotionPredictor
 
 # ─────────────────────────────────────────────
-# Klasör adı → timm model ismi eşleştirmesi
+# Klasor adi → timm model ismi eslestirmesi
 # ─────────────────────────────────────────────
-# Bazı klasör/dosya adları timm isimleriyle eşleşmez.
-# Bu tablo özel durumları ele alır.
 FOLDER_TO_TIMM = {
     "resnet18":              "resnet18",
     "VGG16":                 "vgg16",
@@ -51,203 +49,202 @@ FOLDER_TO_TIMM = {
 }
 
 # ─────────────────────────────────────────────
-# timm model ismi → giriş boyutu eşleştirmesi
+# timm model ismi → giris boyutu eslestirmesi
 # ─────────────────────────────────────────────
 TIMM_INPUT_SIZES = {
     "xception":        299,
     "efficientnet_b3": 300,
 }
-DEFAULT_INPUT_SIZE = 224
+VARSAYILAN_GIRIS_BOYUTU = 224
 
 
-def _normalize_folder_name(name: str) -> str:
+def _klasor_adi_normalize_et(ad: str) -> str:
     """
-    Klasör veya dosya adını normalize et.
-    Örnek: 'Resnet18' → 'resnet18', 'convnext_tiny_best' → 'convnext_tiny'
+    Klasor veya dosya adini normalize et.
+    Ornek: 'Resnet18' → 'resnet18', 'convnext_tiny_best' → 'convnext_tiny'
     """
-    # Büyük/küçük harf normalize
-    normalized = name.strip()
+    normalize_edilmis = ad.strip()
 
-    # '_best' suffix'ini kaldır
-    if normalized.endswith("_best"):
-        normalized = normalized[:-5]
+    # '_best' suffix'ini kaldir
+    if normalize_edilmis.endswith("_best"):
+        normalize_edilmis = normalize_edilmis[:-5]
 
-    return normalized
+    return normalize_edilmis
 
 
-def _get_timm_name(folder_name: str) -> str:
+def _timm_adi_getir(klasor_adi: str) -> str:
     """
-    Klasör adından timm model ismini çıkar.
-    Önce eşleştirme tablosunu kontrol eder, bulamazsa adı olduğu gibi döndürür.
+    Klasor adindan timm model ismini cikar.
+    Once eslestirme tablosunu kontrol eder, bulamazsa adi oldugu gibi dondurur.
     """
-    # Önce tablodan dene (orijinal ad)
-    if folder_name in FOLDER_TO_TIMM:
-        return FOLDER_TO_TIMM[folder_name]
+    # Once tablodan dene (orijinal ad)
+    if klasor_adi in FOLDER_TO_TIMM:
+        return FOLDER_TO_TIMM[klasor_adi]
 
     # Normalize edip tekrar dene
-    normalized = _normalize_folder_name(folder_name)
-    if normalized in FOLDER_TO_TIMM:
-        return FOLDER_TO_TIMM[normalized]
+    normalize_edilmis = _klasor_adi_normalize_et(klasor_adi)
+    if normalize_edilmis in FOLDER_TO_TIMM:
+        return FOLDER_TO_TIMM[normalize_edilmis]
 
-    # Küçük harfe çevirip dene
-    lower = normalized.lower()
-    for key, value in FOLDER_TO_TIMM.items():
-        if key.lower() == lower:
-            return value
+    # Kucuk harfe cevirip dene
+    kucuk_harf = normalize_edilmis.lower()
+    for anahtar, deger in FOLDER_TO_TIMM.items():
+        if anahtar.lower() == kucuk_harf:
+            return deger
 
-    # Tabloda bulunamadı — adı döndür (timm'in kendisi deneyecek)
-    return normalized.lower()
+    # Tabloda bulunamadi — adi dondur (timm'in kendisi deneyecek)
+    return normalize_edilmis.lower()
 
 
-def _get_input_size(timm_name: str) -> int:
-    """timm model ismine göre giriş boyutu döndür."""
-    return TIMM_INPUT_SIZES.get(timm_name, DEFAULT_INPUT_SIZE)
+def _giris_boyutu_getir(timm_adi: str) -> int:
+    """timm model ismine gore giris boyutu dondur."""
+    return TIMM_INPUT_SIZES.get(timm_adi, VARSAYILAN_GIRIS_BOYUTU)
 
 
 class ModelRegistry:
     """
-    Çoklu model kayıt ve lazy-loading yöneticisi.
+    Coklu model kayit ve lazy-loading yoneticisi.
 
-    Kullanım:
-        registry = ModelRegistry("/path/to/models")
-        registry.scan()
-        predictor = registry.get_model("resnet18")
+    Kullanim:
+        kayit_defteri = ModelRegistry("/path/to/models")
+        kayit_defteri.tara()
+        tahminleyici = kayit_defteri.model_getir("resnet18")
     """
 
-    def __init__(self, models_dir: str):
+    def __init__(self, modeller_dizini: str):
         """
         Args:
-            models_dir: Model klasörlerinin bulunduğu dizin (ör. backend/models/)
+            modeller_dizini: Model klasorlerinin bulundugu dizin (or. backend/models/)
         """
-        self.models_dir = os.path.abspath(models_dir)
+        self.modeller_dizini = os.path.abspath(modeller_dizini)
 
-        # ─── Registry: { display_name: { timm_name, pth_path, input_size } } ───
-        self._registry: dict = {}
+        # ─── Kayit defteri: { gorunen_ad: { timm_name, pth_path, input_size } } ───
+        self._kayit_defteri: dict = {}
 
-        # ─── Cache: { display_name: EmotionPredictor instance } ───
-        self._cache: dict = {}
+        # ─── Onbellek: { gorunen_ad: EmotionPredictor instance } ───
+        self._onbellek: dict = {}
 
-        # ─── Thread-safe loading ───
-        self._lock = threading.Lock()
+        # ─── Thread-safe yukleme ───
+        self._kilit = threading.Lock()
 
-    def scan(self) -> int:
+    def tara(self) -> int:
         """
-        models_dir'i tara, tüm model dosyalarını bul ve registry'ye ekle.
+        modeller_dizini'ni tara, tum model dosyalarini bul ve kayit defterine ekle.
 
         Returns:
-            int: Bulunan model sayısı
+            int: Bulunan model sayisi
         """
-        if not os.path.isdir(self.models_dir):
-            print(f"[Registry] Uyarı: {self.models_dir} dizini bulunamadı")
+        if not os.path.isdir(self.modeller_dizini):
+            print(f"[KayitDefteri] Uyari: {self.modeller_dizini} dizini bulunamadi")
             return 0
 
-        self._registry.clear()
+        self._kayit_defteri.clear()
 
-        # ─── 1. Alt klasörlerdeki .pth dosyalarını tara ───
-        for entry in os.listdir(self.models_dir):
-            entry_path = os.path.join(self.models_dir, entry)
+        # ─── 1. Alt klasorlerdeki .pth dosyalarini tara ───
+        for girdi in os.listdir(self.modeller_dizini):
+            girdi_yolu = os.path.join(self.modeller_dizini, girdi)
 
-            if os.path.isdir(entry_path):
-                # Klasör içindeki ilk .pth dosyasını bul
-                pth_files = glob.glob(os.path.join(entry_path, "*.pth"))
-                if pth_files:
-                    pth_path = pth_files[0]  # İlk .pth dosyasını al
-                    timm_name = _get_timm_name(entry)
-                    input_size = _get_input_size(timm_name)
+            if os.path.isdir(girdi_yolu):
+                # Klasor icindeki ilk .pth dosyasini bul
+                pth_dosyalari = glob.glob(os.path.join(girdi_yolu, "*.pth"))
+                if pth_dosyalari:
+                    pth_yolu = pth_dosyalari[0]
+                    timm_adi = _timm_adi_getir(girdi)
+                    giris_boyutu = _giris_boyutu_getir(timm_adi)
 
-                    self._registry[entry] = {
-                        "display_name": entry,
-                        "timm_name": timm_name,
-                        "pth_path": pth_path,
-                        "input_size": input_size,
+                    self._kayit_defteri[girdi] = {
+                        "display_name": girdi,
+                        "timm_name": timm_adi,
+                        "pth_path": pth_yolu,
+                        "input_size": giris_boyutu,
                         "loaded": False,
                     }
 
-            elif entry.endswith(".pth"):
-                # Kök dizindeki .pth dosyası
-                base_name = entry.replace(".pth", "")
-                timm_name = _get_timm_name(base_name)
-                input_size = _get_input_size(timm_name)
+            elif girdi.endswith(".pth"):
+                # Kok dizindeki .pth dosyasi
+                temel_ad = girdi.replace(".pth", "")
+                timm_adi = _timm_adi_getir(temel_ad)
+                giris_boyutu = _giris_boyutu_getir(timm_adi)
 
-                self._registry[base_name] = {
-                    "display_name": base_name,
-                    "timm_name": timm_name,
-                    "pth_path": entry_path,
-                    "input_size": input_size,
+                self._kayit_defteri[temel_ad] = {
+                    "display_name": temel_ad,
+                    "timm_name": timm_adi,
+                    "pth_path": girdi_yolu,
+                    "input_size": giris_boyutu,
                     "loaded": False,
                 }
 
-        print(f"[Registry] {len(self._registry)} model bulundu:")
-        for name, info in sorted(self._registry.items()):
-            print(f"  • {name} → timm:{info['timm_name']} ({info['input_size']}px)")
+        print(f"[KayitDefteri] {len(self._kayit_defteri)} model bulundu:")
+        for ad, bilgi in sorted(self._kayit_defteri.items()):
+            print(f"  - {ad} -> timm:{bilgi['timm_name']} ({bilgi['input_size']}px)")
 
-        return len(self._registry)
+        return len(self._kayit_defteri)
 
-    def list_models(self) -> list:
+    def modelleri_listele(self) -> list:
         """
-        Kayıtlı model bilgilerini döndür.
+        Kayitli model bilgilerini dondur.
 
         Returns:
             list: [ { name, timm_name, input_size, loaded }, ... ]
         """
         return [
             {
-                "name": name,
-                "timm_name": info["timm_name"],
-                "input_size": info["input_size"],
-                "loaded": info["loaded"],
+                "name": ad,
+                "timm_name": bilgi["timm_name"],
+                "input_size": bilgi["input_size"],
+                "loaded": bilgi["loaded"],
             }
-            for name, info in sorted(self._registry.items())
+            for ad, bilgi in sorted(self._kayit_defteri.items())
         ]
 
-    def get_model(self, name: str) -> EmotionPredictor:
+    def model_getir(self, ad: str) -> EmotionPredictor:
         """
-        İsme göre model döndür. İlk çağrıda lazy loading yapılır.
+        Isme gore model dondur. Ilk cagirida lazy loading yapilir.
 
         Args:
-            name: Model adı (registry'deki display_name)
+            ad: Model adi (kayit defterindeki display_name)
 
         Returns:
-            EmotionPredictor: Yüklenmiş ve kullanıma hazır model
+            EmotionPredictor: Yuklenmis ve kullanima hazir model
 
         Raises:
-            KeyError: Model registry'de bulunamazsa
+            KeyError: Model kayit defterinde bulunamazsa
         """
-        if name not in self._registry:
+        if ad not in self._kayit_defteri:
             raise KeyError(
-                f"Model bulunamadı: '{name}'\n"
-                f"Mevcut modeller: {list(self._registry.keys())}"
+                f"Model bulunamadi: '{ad}'\n"
+                f"Mevcut modeller: {list(self._kayit_defteri.keys())}"
             )
 
-        # ─── Cache'de varsa direkt döndür ───
-        if name in self._cache:
-            return self._cache[name]
+        # ─── Onbellekte varsa direkt dondur ───
+        if ad in self._onbellek:
+            return self._onbellek[ad]
 
         # ─── Thread-safe lazy loading ───
-        with self._lock:
-            # Double-check (başka thread yüklemiş olabilir)
-            if name in self._cache:
-                return self._cache[name]
+        with self._kilit:
+            # Double-check (baska thread yuklenmis olabilir)
+            if ad in self._onbellek:
+                return self._onbellek[ad]
 
-            info = self._registry[name]
-            print(f"[Registry] Model yükleniyor: {name} (timm:{info['timm_name']})")
+            bilgi = self._kayit_defteri[ad]
+            print(f"[KayitDefteri] Model yukleniyor: {ad} (timm:{bilgi['timm_name']})")
 
-            # ─── EmotionPredictor oluştur ───
-            predictor = EmotionPredictor(
-                model_path=info["pth_path"],
-                timm_model_name=info["timm_name"],
-                input_size=info["input_size"],
+            # ─── EmotionPredictor olustur ───
+            tahminleyici = EmotionPredictor(
+                model_yolu=bilgi["pth_path"],
+                timm_model_name=bilgi["timm_name"],
+                giris_boyutu=bilgi["input_size"],
             )
 
-            # Cache'e kaydet
-            self._cache[name] = predictor
-            info["loaded"] = True
+            # Onbellege kaydet
+            self._onbellek[ad] = tahminleyici
+            bilgi["loaded"] = True
 
-            print(f"[Registry] ✅ {name} yüklendi ve cache'lendi")
-            return predictor
+            print(f"[KayitDefteri] ✅ {ad} yuklendi ve onbelleklendi")
+            return tahminleyici
 
-    def get_default_model_name(self) -> str:
-        """Registry'deki ilk modelin adını döndür (varsayılan model)."""
-        if not self._registry:
+    def varsayilan_model_adi_getir(self) -> str:
+        """Kayit defterindeki ilk modelin adini dondur (varsayilan model)."""
+        if not self._kayit_defteri:
             return None
-        return sorted(self._registry.keys())[0]
+        return sorted(self._kayit_defteri.keys())[0]

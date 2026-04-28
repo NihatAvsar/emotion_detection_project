@@ -1,26 +1,26 @@
 /**
- * WebcamView Bileşeni
+ * WebcamView Bileseni
  * ====================
- * Kamera görüntüsünü gösterir ve tespit edilen yüzlerin
- * etrafına bounding box + duygu etiketi çizer.
+ * Kamera goruntusunu gosterir ve tespit edilen yuzlerin
+ * etrafina bounding box + duygu etiketi cizer.
  *
  * Props:
- *   videoRef  — <video> elementi referansı
- *   faces     — Backend'den gelen yüz verileri dizisi
- *   isActive  — Kamera açık mı?
- *   fps       — Anlık FPS değeri
- *   onStart   — Kamerayı başlat callback
- *   onStop    — Kamerayı durdur callback
+ *   videoRef  — <video> elementi referansi
+ *   faces     — Backend'den gelen yuz verileri dizisi
+ *   isActive  — Kamera acik mi?
+ *   fps       — Anlik FPS degeri
+ *   onStart   — Kamerayi baslat callback
+ *   onStop    — Kamerayi durdur callback
  *
- * ÖNEMLİ: <video> elementi her zaman DOM'da kalır (display:none ile gizlenir).
- * Bu sayede videoRef.current her zaman geçerlidir ve stream bağlama
- * işlemi asla null ref sorunu yaşamaz.
+ * ONEMLI: <video> elementi her zaman DOM'da kalir (display:none ile gizlenir).
+ * Bu sayede videoRef.current her zaman gecerlidir ve stream baglama
+ * islemi asla null ref sorunu yasamaz.
  */
 
 import { useRef, useEffect } from 'react';
 
 // ─── Duygu renkleri (bounding box) ───
-const EMOTION_COLORS = {
+const DUYGU_RENKLERI = {
   happy: '#fbbf24',
   sad: '#60a5fa',
   angry: '#ef4444',
@@ -28,8 +28,8 @@ const EMOTION_COLORS = {
   neutral: '#94a3b8',
 };
 
-// ─── Duygu Türkçe etiketleri ───
-const EMOTION_LABELS = {
+// ─── Duygu Turkce etiketleri ───
+const DUYGU_ETIKETLERI = {
   happy: 'Mutlu',
   sad: 'Üzgün',
   angry: 'Kızgın',
@@ -40,14 +40,14 @@ const EMOTION_LABELS = {
 export default function WebcamView({ videoRef, faces, isActive, fps, onStart, onStop }) {
   const canvasRef = useRef(null);
 
-  // ─── Canvas üzerine bounding box çiz ───
+  // ─── Canvas uzerine bounding box ciz ───
   useEffect(() => {
     const canvas = canvasRef.current;
     const video = videoRef?.current;
     if (!canvas || !video) return;
 
     const ctx = canvas.getContext('2d');
-    // Canvas boyutunu video boyutuna eşitle
+    // Canvas boyutunu video boyutuna esitle
     canvas.width = video.videoWidth || canvas.clientWidth;
     canvas.height = video.videoHeight || canvas.clientHeight;
 
@@ -56,88 +56,88 @@ export default function WebcamView({ videoRef, faces, isActive, fps, onStart, on
 
     if (!faces || faces.length === 0) return;
 
-    faces.forEach((face) => {
-      const { face_bbox, emotion, confidence, face_id } = face;
+    faces.forEach((yuz) => {
+      const { face_bbox, emotion, confidence, face_id } = yuz;
       if (!face_bbox) return;
 
-      // ─── Normalize koordinatları piksele çevir ───
-      const x = face_bbox.x * canvas.width;
+      // ─── Normalize koordinatlari piksele cevir (X aynalaniyor — video mirror) ───
+      const x = (1 - face_bbox.x - face_bbox.w) * canvas.width;
       const y = face_bbox.y * canvas.height;
-      const w = face_bbox.w * canvas.width;
-      const h = face_bbox.h * canvas.height;
+      const g = face_bbox.w * canvas.width;
+      const yukseklik = face_bbox.h * canvas.height;
 
-      const color = EMOTION_COLORS[emotion] || '#ffffff';
-      const label = EMOTION_LABELS[emotion] || emotion;
-      const conf = Math.round(confidence * 100);
-      const idLabel = face_id ? `#${face_id} ` : '';
+      const renk = DUYGU_RENKLERI[emotion] || '#ffffff';
+      const etiket = DUYGU_ETIKETLERI[emotion] || emotion;
+      const guven = Math.round(confidence * 100);
+      const kimlikEtiketi = face_id ? `#${face_id} ` : '';
 
       // ─── Glow efekti ───
-      ctx.shadowColor = color;
+      ctx.shadowColor = renk;
       ctx.shadowBlur = 12;
 
-      // ─── Bounding box (köşe süsleri) ───
-      const cornerLen = Math.min(w, h) * 0.2;
-      const lineWidth = 3;
-      ctx.strokeStyle = color;
-      ctx.lineWidth = lineWidth;
+      // ─── Bounding box (kose susleri) ───
+      const koseUzunlugu = Math.min(g, yukseklik) * 0.2;
+      const cizgiKalinligi = 3;
+      ctx.strokeStyle = renk;
+      ctx.lineWidth = cizgiKalinligi;
       ctx.lineCap = 'round';
 
-      // Sol üst köşe
+      // Sol ust kose
       ctx.beginPath();
-      ctx.moveTo(x, y + cornerLen);
+      ctx.moveTo(x, y + koseUzunlugu);
       ctx.lineTo(x, y);
-      ctx.lineTo(x + cornerLen, y);
+      ctx.lineTo(x + koseUzunlugu, y);
       ctx.stroke();
 
-      // Sağ üst köşe
+      // Sag ust kose
       ctx.beginPath();
-      ctx.moveTo(x + w - cornerLen, y);
-      ctx.lineTo(x + w, y);
-      ctx.lineTo(x + w, y + cornerLen);
+      ctx.moveTo(x + g - koseUzunlugu, y);
+      ctx.lineTo(x + g, y);
+      ctx.lineTo(x + g, y + koseUzunlugu);
       ctx.stroke();
 
-      // Sol alt köşe
+      // Sol alt kose
       ctx.beginPath();
-      ctx.moveTo(x, y + h - cornerLen);
-      ctx.lineTo(x, y + h);
-      ctx.lineTo(x + cornerLen, y + h);
+      ctx.moveTo(x, y + yukseklik - koseUzunlugu);
+      ctx.lineTo(x, y + yukseklik);
+      ctx.lineTo(x + koseUzunlugu, y + yukseklik);
       ctx.stroke();
 
-      // Sağ alt köşe
+      // Sag alt kose
       ctx.beginPath();
-      ctx.moveTo(x + w - cornerLen, y + h);
-      ctx.lineTo(x + w, y + h);
-      ctx.lineTo(x + w, y + h - cornerLen);
+      ctx.moveTo(x + g - koseUzunlugu, y + yukseklik);
+      ctx.lineTo(x + g, y + yukseklik);
+      ctx.lineTo(x + g, y + yukseklik - koseUzunlugu);
       ctx.stroke();
 
-      // ─── İnce kenar çizgileri ───
+      // ─── Ince kenar cizgileri ───
       ctx.shadowBlur = 0;
       ctx.lineWidth = 1;
       ctx.globalAlpha = 0.3;
-      ctx.strokeRect(x, y, w, h);
+      ctx.strokeRect(x, y, g, yukseklik);
       ctx.globalAlpha = 1;
 
-      // ─── Etiket arka planı ───
-      const text = `${idLabel}${label}  ${conf}%`;
+      // ─── Etiket arka plani ───
+      const etiketMetni = `${kimlikEtiketi}${etiket}  ${guven}%`;
       ctx.font = 'bold 14px Inter, sans-serif';
-      const textMetrics = ctx.measureText(text);
-      const textW = textMetrics.width + 16;
-      const textH = 28;
-      const textX = x;
-      const textY = y - textH - 4;
+      const metinOlculeri = ctx.measureText(etiketMetni);
+      const metinG = metinOlculeri.width + 16;
+      const metinY = 28;
+      const metinX = x;
+      const metinUst = y - metinY - 4;
 
-      // Yarı saydam arka plan
-      ctx.fillStyle = color;
+      // Yari saydam arka plan
+      ctx.fillStyle = renk;
       ctx.globalAlpha = 0.85;
       ctx.beginPath();
-      ctx.roundRect(textX, textY, textW, textH, 6);
+      ctx.roundRect(metinX, metinUst, metinG, metinY, 6);
       ctx.fill();
       ctx.globalAlpha = 1;
 
       // Metin
       ctx.fillStyle = '#000000';
       ctx.font = 'bold 13px Inter, sans-serif';
-      ctx.fillText(text, textX + 8, textY + 19);
+      ctx.fillText(etiketMetni, metinX + 8, metinUst + 19);
     });
   }, [faces, videoRef]);
 
@@ -150,10 +150,10 @@ export default function WebcamView({ videoRef, faces, isActive, fps, onStart, on
       <div className="card-body" style={{ padding: 0 }}>
         <div className="webcam-container">
           {/*
-            ÖNEMLİ: <video> her zaman DOM'da kalır.
-            isActive false iken display:none ile gizlenir.
+            ONEMLI: <video> her zaman DOM'da kalir.
+            aktifMi false iken display:none ile gizlenir.
             Bu sayede videoRef.current asla null olmaz ve
-            stream bağlama işlemi sorunsuz çalışır.
+            stream baglama islemi sorunsuz calisir.
           */}
           <video
             ref={videoRef}
@@ -168,7 +168,6 @@ export default function WebcamView({ videoRef, faces, isActive, fps, onStart, on
           <canvas
             ref={canvasRef}
             style={{
-              transform: 'scaleX(-1)',
               display: isActive ? 'block' : 'none',
             }}
           />

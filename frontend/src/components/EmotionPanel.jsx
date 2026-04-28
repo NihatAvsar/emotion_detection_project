@@ -1,17 +1,17 @@
 /**
- * EmotionPanel Bileşeni
+ * EmotionPanel Bileseni
  * ======================
- * Anlık baskın duyguyu büyük emoji, Türkçe etiket
- * ve güven yüzdesi ile gösterir.
+ * Anlik baskin duyguyu buyuk emoji, Turkce etiket
+ * ve guven yuzdesi ile gosterir.
  *
  * Props:
- *   emotion    — Duygu adı (İngilizce, ör. "happy")
- *   confidence — Güven skoru (0-1)
+ *   emotion    — Duygu adi (Ingilizce, or. "happy")
+ *   confidence — Guven skoru (0-1)
  *   emoji      — Duygu emojisi
- *   emotionTr  — Türkçe etiket
+ *   emotionTr  — Turkce etiket
  */
 
-const EMOTION_COLORS = {
+const DUYGU_RENKLERI = {
   happy: '#fbbf24',
   sad: '#60a5fa',
   angry: '#ef4444',
@@ -20,13 +20,13 @@ const EMOTION_COLORS = {
 };
 
 export default function EmotionPanel({ emotion, confidence, emoji, emotionTr }) {
-  const color = EMOTION_COLORS[emotion] || '#94a3b8';
-  const confPercent = Math.round((confidence || 0) * 100);
+  const renk = DUYGU_RENKLERI[emotion] || '#94a3b8';
+  const guvenYuzdesi = Math.round((confidence || 0) * 100);
 
-  // ─── Güven seviyesi sınıfı ───
-  let confClass = 'low';
-  if (confPercent >= 70) confClass = 'high';
-  else if (confPercent >= 40) confClass = 'medium';
+  // ─── Guven seviyesi sinifi ───
+  let guvenSinifi = 'low';
+  if (guvenYuzdesi >= 70) guvenSinifi = 'high';
+  else if (guvenYuzdesi >= 40) guvenSinifi = 'medium';
 
   return (
     <div className="glass-card">
@@ -40,14 +40,14 @@ export default function EmotionPanel({ emotion, confidence, emoji, emotionTr }) 
             <div className="emotion-emoji" key={emotion}>
               {emoji || '😐'}
             </div>
-            <div className="emotion-label" style={{ color }}>
+            <div className="emotion-label" style={{ color: renk }}>
               {emotionTr || emotion}
             </div>
             <div className="emotion-sublabel">
               {emotion}
             </div>
-            <span className={`confidence-badge ${confClass}`}>
-              🎯 %{confPercent} güven
+            <span className={`confidence-badge ${guvenSinifi}`}>
+              🎯 %{guvenYuzdesi} güven
             </span>
           </>
         ) : (

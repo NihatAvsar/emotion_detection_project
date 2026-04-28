@@ -1,14 +1,14 @@
 """
-ConvNeXt Tiny Duygu Tanıma Modeli
+ConvNeXt Tiny Duygu Tanima Modeli
 ==================================
-Bu modül, ConvNeXt Tiny mimarisini kullanarak yüz ifadelerinden
+Bu modul, ConvNeXt Tiny mimarisini kullanarak yuz ifadelerinden
 duygu tahmini (inference) yapar.
 
-Model detayları:
-- Mimari: ConvNeXt Tiny (timm kütüphanesi ile)
-- Giriş: 640x640 RGB görüntü
-- Çıkış: 5 duygu sınıfı (angry, happy, neutral, sad, surprised)
-- Doğruluk: ~%89
+Model detaylari:
+- Mimari: ConvNeXt Tiny (timm kutuphanesi ile)
+- Giris: 640x640 RGB goruntu
+- Cikis: 5 duygu sinifi (angry, happy, neutral, sad, surprised)
+- Dogruluk: ~%89
 """
 
 import torch
@@ -19,11 +19,11 @@ from torchvision import transforms
 import timm
 import os
 
-# ─── Duygu sınıfları (alfabetik sırada, eğitim ile uyumlu) ───
+# ─── Duygu siniflari (alfabetik sirada, egitim ile uyumlu) ───
 EMOTION_CLASSES = ["angry", "happy", "neutral", "sad", "surprised"]
 
-# ─── Türkçe etiketler ───
-EMOTION_LABELS_TR = {
+# ─── Turkce etiketler ───
+DUYGU_ETIKETLERI_TR = {
     "angry": "Kızgın",
     "happy": "Mutlu",
     "neutral": "Nötr",
@@ -31,8 +31,8 @@ EMOTION_LABELS_TR = {
     "surprised": "Şaşkın",
 }
 
-# ─── Emoji eşleştirme ───
-EMOTION_EMOJIS = {
+# ─── Emoji eslestirme ───
+DUYGU_EMOJILERI = {
     "angry": "😠",
     "happy": "😊",
     "neutral": "😐",
@@ -41,51 +41,51 @@ EMOTION_EMOJIS = {
 }
 
 # ─── ImageNet normalizasyon parametreleri ───
-IMAGENET_MEAN = [0.485, 0.456, 0.406]
-IMAGENET_STD = [0.229, 0.224, 0.225]
+IMAGENET_ORTALAMA = [0.485, 0.456, 0.406]
+IMAGENET_STD_SAPMA = [0.229, 0.224, 0.225]
 
-def _build_transform(input_size: int = 224):
-    """Belirtilen giriş boyutuna göre transform pipeline oluştur."""
+def _donusum_olustur(giris_boyutu: int = 224):
+    """Belirtilen giris boyutuna gore transform pipeline olustur."""
     return transforms.Compose([
-        transforms.Resize((input_size, input_size)),  # Model giriş boyutuna ölçekle
-        transforms.ToTensor(),                         # [0,255] → [0,1] tensor
-        transforms.Normalize(                          # ImageNet normalize
-            mean=IMAGENET_MEAN,
-            std=IMAGENET_STD
+        transforms.Resize((giris_boyutu, giris_boyutu)),  # Model giris boyutuna olcekle
+        transforms.ToTensor(),                             # [0,255] → [0,1] tensor
+        transforms.Normalize(                              # ImageNet normalize
+            mean=IMAGENET_ORTALAMA,
+            std=IMAGENET_STD_SAPMA
         ),
     ])
 
-# ─── Geriye uyumluluk: varsayılan transform ───
-inference_transform = _build_transform(224)
+# ─── Geriye uyumluluk: varsayilan transform ───
+cikarsama_donusumu = _donusum_olustur(224)
 
 
 class EmotionPredictor:
     """
-    ConvNeXt Tiny tabanlı duygu tahmin sınıfı.
+    ConvNeXt Tiny tabanli duygu tahmin sinifi.
 
-    Kullanım:
-        predictor = EmotionPredictor("convnext_tiny_best.pth")
-        result = predictor.predict(face_image_np)
+    Kullanim:
+        tahminleyici = EmotionPredictor("convnext_tiny_best.pth")
+        sonuc = tahminleyici.predict(yuz_goruntusu_np)
     """
 
-    def __init__(self, model_path: str, timm_model_name: str = "convnext_tiny",
-                 input_size: int = 224, device: str = None):
+    def __init__(self, model_yolu: str, timm_model_name: str = "convnext_tiny",
+                 giris_boyutu: int = 224, device: str = None):
         """
-        Model yükleme ve hazırlık.
+        Model yukleme ve hazirlik.
 
         Args:
-            model_path: .pth model dosyasının yolu
-            timm_model_name: timm kütüphanesindeki model adı (varsayılan: convnext_tiny)
-            input_size: Model giriş boyutu (varsayılan: 224)
-            device: "cuda" veya "cpu" (None ise otomatik seçim)
+            model_yolu: .pth model dosyasinin yolu
+            timm_model_name: timm kutuphanesindeki model adi (varsayilan: convnext_tiny)
+            giris_boyutu: Model giris boyutu (varsayilan: 224)
+            device: "cuda" veya "cpu" (None ise otomatik secim)
         """
         self.timm_model_name = timm_model_name
-        self.input_size = input_size
+        self.giris_boyutu = giris_boyutu
 
-        # ─── Giriş boyutuna göre transform oluştur ───
-        self.transform = _build_transform(input_size)
+        # ─── Giris boyutuna gore transform olustur ───
+        self.transform = _donusum_olustur(giris_boyutu)
 
-        # ─── Cihaz seçimi (GPU varsa GPU, yoksa CPU) ───
+        # ─── Cihaz secimi (GPU varsa GPU, yoksa CPU) ───
         if device is None:
             self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
         else:
@@ -93,77 +93,77 @@ class EmotionPredictor:
 
         print(f"[Model] Cihaz: {self.device}")
 
-        # ─── timm model oluştur (5 sınıf) ───
+        # ─── timm model olustur (5 sinif) ───
         self.model = timm.create_model(
             timm_model_name,
-            pretrained=False,  # Ağırlıkları dosyadan yükleyeceğiz
+            pretrained=False,  # Agirliklari dosyadan yukleyecegiz
             num_classes=len(EMOTION_CLASSES),
         )
 
-        # ─── Eğitilmiş ağırlıkları yükle ───
-        if not os.path.exists(model_path):
+        # ─── Egitilmis agirliklari yukle ───
+        if not os.path.exists(model_yolu):
             raise FileNotFoundError(
-                f"Model dosyası bulunamadı: {model_path}\n"
-                f"Lütfen 'convnext_tiny_best.pth' dosyasını proje kök dizinine kopyalayın."
+                f"Model dosyasi bulunamadi: {model_yolu}\n"
+                f"Lutfen 'convnext_tiny_best.pth' dosyasini proje kok dizinine kopyalayin."
             )
 
-        state_dict = torch.load(model_path, map_location=self.device, weights_only=True)
-        self.model.load_state_dict(state_dict)
-        print(f"[Model] Ağırlıklar yüklendi: {model_path}")
+        agirlik_sozlugu = torch.load(model_yolu, map_location=self.device, weights_only=True)
+        self.model.load_state_dict(agirlik_sozlugu)
+        print(f"[Model] Agirliklar yuklendi: {model_yolu}")
 
-        # ─── Eval moduna geç (dropout / batchnorm kapatır) ───
+        # ─── Eval moduna gec (dropout / batchnorm kapatir) ───
         self.model.eval()
         self.model.to(self.device)
-        print(f"[Model] Hazır — {len(EMOTION_CLASSES)} sınıf: {EMOTION_CLASSES}")
+        print(f"[Model] Hazir - {len(EMOTION_CLASSES)} sinif: {EMOTION_CLASSES}")
 
-    def predict(self, face_image: np.ndarray) -> dict:
+    def predict(self, yuz_goruntusu: np.ndarray) -> dict:
         """
-        Kırpılmış yüz görüntüsünden duygu tahmini yap.
+        Kirpilmis yuz goruntusunden duygu tahmini yap.
 
         Args:
-            face_image: BGR veya RGB numpy array (OpenCV formatı)
+            yuz_goruntusu: BGR veya RGB numpy array (OpenCV formati)
 
         Returns:
             dict: {
-                "emotion": str,        # Tahmin edilen duygu (İngilizce)
-                "emotion_tr": str,     # Türkçe etiket
+                "emotion": str,        # Tahmin edilen duygu (Ingilizce)
+                "emotion_tr": str,     # Turkce etiket
                 "emoji": str,          # Emoji
-                "confidence": float,   # Güven skoru (0-1)
-                "probabilities": dict  # Her sınıf için olasılık
+                "confidence": float,   # Guven skoru (0-1)
+                "probabilities": dict  # Her sinif icin olasilik
             }
         """
-        # ─── BGR → RGB dönüşümü (OpenCV BGR kullanır) ───
-        if len(face_image.shape) == 3 and face_image.shape[2] == 3:
-            rgb_image = face_image[:, :, ::-1]  # BGR → RGB
+        # ─── BGR → RGB donusumu (OpenCV BGR kullanir) ───
+        if len(yuz_goruntusu.shape) == 3 and yuz_goruntusu.shape[2] == 3:
+            rgb_goruntu = yuz_goruntusu[:, :, ::-1]  # BGR → RGB
         else:
-            rgb_image = face_image
+            rgb_goruntu = yuz_goruntusu
 
         # ─── NumPy → PIL Image ───
-        pil_image = Image.fromarray(rgb_image.astype(np.uint8))
+        pil_goruntu = Image.fromarray(rgb_goruntu.astype(np.uint8))
 
         # ─── Transform uygula: resize, normalize, tensor ───
-        input_tensor = self.transform(pil_image)
-        input_batch = input_tensor.unsqueeze(0).to(self.device)  # Batch boyutu ekle
+        giris_tensoru = self.transform(pil_goruntu)
+        giris_grubu = giris_tensoru.unsqueeze(0).to(self.device)  # Batch boyutu ekle
 
-        # ─── Inference (gradient hesaplaması kapalı — hız + bellek) ───
+        # ─── Inference (gradient hesaplamasi kapali — hiz + bellek) ───
         with torch.no_grad():
-            logits = self.model(input_batch)               # Ham çıkış
-            probabilities = F.softmax(logits, dim=1)[0]    # Olasılıklara dönüştür
+            ham_ciktilar = self.model(giris_grubu)                    # Ham cikis
+            olasiliklar = F.softmax(ham_ciktilar, dim=1)[0]          # Olasikliklara donustur
 
-        # ─── En yüksek olasılıklı sınıfı bul ───
-        confidence, predicted_idx = torch.max(probabilities, dim=0)
-        predicted_emotion = EMOTION_CLASSES[predicted_idx.item()]
+        # ─── En yuksek olasilikli sinifi bul ───
+        guven_skoru, tahmin_indeksi = torch.max(olasiliklar, dim=0)
+        tahmin_edilen_duygu = EMOTION_CLASSES[tahmin_indeksi.item()]
 
-        # ─── Tüm sınıf olasılıklarını dict'e çevir ───
-        prob_dict = {
-            cls: round(probabilities[i].item(), 4)
+        # ─── Tum sinif olasiliklirini dict'e cevir ───
+        olasilik_sozlugu = {
+            cls: round(olasiliklar[i].item(), 4)
             for i, cls in enumerate(EMOTION_CLASSES)
         }
 
         return {
-            "emotion": predicted_emotion,
-            "emotion_tr": EMOTION_LABELS_TR[predicted_emotion],
-            "emoji": EMOTION_EMOJIS[predicted_emotion],
-            "confidence": round(confidence.item(), 4),
-            "probabilities": prob_dict,
+            "emotion": tahmin_edilen_duygu,
+            "emotion_tr": DUYGU_ETIKETLERI_TR[tahmin_edilen_duygu],
+            "emoji": DUYGU_EMOJILERI[tahmin_edilen_duygu],
+            "confidence": round(guven_skoru.item(), 4),
+            "probabilities": olasilik_sozlugu,
         }

@@ -1,18 +1,17 @@
 /**
- * FaceListPanel Bileşeni
+ * FaceListPanel Bileseni
  * =======================
- * Kamerada tespit edilen tüm yüzleri listeler.
- * Her kişi için emoji, Türkçe duygu etiketi ve güven yüzdesi gösterilir.
- * Tıklanan kişi seçili olarak işaretlenir ve sağ paneldeki
- * detay bilgileri o kişiye göre güncellenir.
+ * Kamerada tespit edilen tum yuzleri listeler.
+ * Her kisi icin emoji, Turkce duygu etiketi, guven yuzdesi
+ * ve tracked_face_id gosterilir.
  *
  * Props:
- *   faces             — Backend'den gelen yüz verileri dizisi
- *   selectedFaceIndex — Şu an seçili yüzün index'i
- *   onSelectFace      — Yüz seçildiğinde çağrılacak callback
+ *   faces             — Backend'den gelen yuz verileri dizisi
+ *   selectedFaceIndex — Su an secili yuzun index'i
+ *   onSelectFace      — Yuz secildiginde cagrilacak callback
  */
 
-const EMOTION_COLORS = {
+const DUYGU_RENKLERI = {
   happy: '#fbbf24',
   sad: '#60a5fa',
   angry: '#ef4444',
@@ -21,44 +20,52 @@ const EMOTION_COLORS = {
 };
 
 export default function FaceListPanel({ faces, selectedFaceIndex, onSelectFace }) {
-  const hasFaces = faces && faces.length > 0;
+  const yuzlerVar = faces && faces.length > 0;
 
   return (
     <div className="glass-card">
       <div className="card-header">
         <span className="icon">👥</span>
         <h2>Tespit Edilen Kişiler</h2>
-        {hasFaces && (
+        {yuzlerVar && (
           <span className="face-count-badge">{faces.length}</span>
         )}
       </div>
       <div className="card-body face-list-body">
-        {hasFaces ? (
+        {yuzlerVar ? (
           <div className="face-list">
-            {faces.map((face, index) => {
-              const color = EMOTION_COLORS[face.emotion] || '#94a3b8';
-              const conf = Math.round((face.confidence || 0) * 100);
-              const isSelected = index === selectedFaceIndex;
+            {faces.map((yuz, indeks) => {
+              const renk = DUYGU_RENKLERI[yuz.emotion] || '#94a3b8';
+              const guven = Math.round((yuz.confidence || 0) * 100);
+              const seciliMi = indeks === selectedFaceIndex;
+              const takipId = yuz.tracked_face_id || null;
 
               return (
                 <button
-                  key={face.face_id || index}
-                  className={`face-list-item ${isSelected ? 'selected' : ''}`}
-                  onClick={() => onSelectFace(index)}
-                  style={{ '--face-color': color }}
+                  key={yuz.face_id || indeks}
+                  className={`face-list-item ${seciliMi ? 'selected' : ''}`}
+                  onClick={() => onSelectFace(indeks)}
+                  style={{ '--face-color': renk }}
                 >
-                  <span className="face-list-id">#{face.face_id || index + 1}</span>
-                  <span className="face-list-emoji">{face.emoji || '😐'}</span>
+                  <span className="face-list-id">#{yuz.face_id || indeks + 1}</span>
+                  <span className="face-list-emoji">{yuz.emoji || '😐'}</span>
                   <div className="face-list-info">
-                    <span className="face-list-emotion" style={{ color }}>
-                      {face.emotion_tr || face.emotion}
+                    <span className="face-list-emotion" style={{ color: renk }}>
+                      {yuz.emotion_tr || yuz.emotion}
                     </span>
-                    <span className="face-list-conf">%{conf} güven</span>
+                    <div className="face-list-alt-bilgi">
+                      <span className="face-list-conf">%{guven} güven</span>
+                      {takipId && (
+                        <span className="face-list-takip" title={takipId}>
+                          🔗 {takipId}
+                        </span>
+                      )}
+                    </div>
                   </div>
                   <div className="face-list-bar-track">
                     <div
                       className="face-list-bar-fill"
-                      style={{ width: `${conf}%`, background: color }}
+                      style={{ width: `${guven}%`, background: renk }}
                     />
                   </div>
                 </button>

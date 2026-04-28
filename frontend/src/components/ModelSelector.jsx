@@ -1,16 +1,16 @@
 /**
- * ModelSelector Bileşeni
+ * ModelSelector Bileseni
  * =======================
- * Backend'deki /models endpointinden model listesini çeker
- * ve kullanıcıya dropdown ile model seçimi sunar.
+ * Backend'deki /models endpointinden model listesini ceker
+ * ve kullaniciya dropdown ile model secimi sunar.
  *
  * Props:
- *   selectedModel — Seçili model adı
- *   onModelChange — Model değiştiğinde callback (name) => void
+ *   selectedModel — Secili model adi
+ *   onModelChange — Model degistiginde callback (name) => void
  *   models        — Model listesi [ { name, timm_name, input_size, loaded } ]
  */
 
-const BACKEND_URL = 'http://localhost:8000';
+const SUNUCU_ADRESI = 'http://localhost:8000';
 
 export default function ModelSelector({ selectedModel, onModelChange, models }) {
   return (
