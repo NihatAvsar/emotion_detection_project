@@ -9,3 +9,7 @@ mediapipe
 opencv-python-headless
 numpy
 Pillow
+sqlalchemy
+pymysql
+python-dotenv
+cryptography
