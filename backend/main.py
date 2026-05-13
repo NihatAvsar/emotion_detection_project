@@ -1012,6 +1012,146 @@ def analytics_live(
     }
 
 
+@app.get("/analytics/compare-yesterday")
+def analytics_compare_yesterday(
+    camera_id: Optional[int] = Query(None),
+    db: Session = Depends(get_db),
+):
+    """
+    Dunku ozet verilerini dondurur.
+    Frontend bugun vs dun karsilastirmasi yapmak icin kullanir.
+    """
+    dun = (datetime.utcnow() - timedelta(days=1)).date()
+    baslangic = datetime.combine(dun, dt_time.min)
+    bitis = baslangic + timedelta(days=1)
+
+    base_query = db.query(CustomerSession).filter(
+        CustomerSession.start_time >= baslangic,
+        CustomerSession.start_time < bitis,
+    )
+
+    if camera_id is not None:
+        base_query = base_query.filter(CustomerSession.camera_id == camera_id)
+
+    total_customers = base_query.count()
+
+    emotion_rows = (
+        base_query.with_entities(
+            CustomerSession.dominant_emotion,
+            func.count(CustomerSession.id)
+        )
+        .group_by(CustomerSession.dominant_emotion)
+        .all()
+    )
+
+    emotion_distribution = {
+        (emotion or "unknown"): count
+        for emotion, count in emotion_rows
+    }
+
+    avg_duration = (
+        base_query.with_entities(func.avg(CustomerSession.duration_seconds))
+        .scalar()
+    )
+
+    avg_confidence = (
+        base_query.with_entities(func.avg(CustomerSession.average_confidence))
+        .scalar()
+    )
+
+    return {
+        "date": dun.isoformat(),
+        "total_customers": total_customers,
+        "emotion_distribution": emotion_distribution,
+        "average_session_duration": round(avg_duration or 0, 2),
+        "average_confidence": round(avg_confidence or 0, 4),
+    }
+
+
+@app.get("/analytics/emotion-hourly-trend")
+def analytics_emotion_hourly_trend(
+    target_date: Optional[date] = Query(None),
+    camera_id: Optional[int] = Query(None),
+    db: Session = Depends(get_db),
+):
+    """
+    Saatlik duygu kirilimi.
+    Her saat icin hangi duygunun kac kez goruldugunu dondurur.
+    """
+    gun = target_date or datetime.utcnow().date()
+    baslangic = datetime.combine(gun, dt_time.min)
+    bitis = baslangic + timedelta(days=1)
+
+    query = db.query(
+        func.hour(EmotionEvent.detected_at).label("hour"),
+        EmotionEvent.emotion_label,
+        func.count(EmotionEvent.id).label("count"),
+    ).join(
+        CustomerSession,
+        EmotionEvent.session_id == CustomerSession.id,
+    ).filter(
+        EmotionEvent.detected_at >= baslangic,
+        EmotionEvent.detected_at < bitis,
+    )
+
+    if camera_id is not None:
+        query = query.filter(CustomerSession.camera_id == camera_id)
+
+    rows = query.group_by(
+        func.hour(EmotionEvent.detected_at),
+        EmotionEvent.emotion_label,
+    ).all()
+
+    # Saatlik veriyi { saat: { emotion: count } } formatina cevir
+    sonuc = {}
+    for hour in range(24):
+        sonuc[str(hour)] = {
+            "happy": 0, "sad": 0, "angry": 0,
+            "surprised": 0, "neutral": 0,
+        }
+
+    for hour, emotion, count in rows:
+        saat_str = str(int(hour))
+        if saat_str in sonuc and emotion in sonuc[saat_str]:
+            sonuc[saat_str][emotion] = count
+
+    return {
+        "date": gun.isoformat(),
+        "hourly_emotions": sonuc,
+    }
+
+
+@app.get("/analytics/filters")
+def analytics_filters(db: Session = Depends(get_db)):
+    """
+    Dashboard filtreleri icin sube ve kamera listelerini dondurur.
+    """
+    branches = db.query(Branch).filter(Branch.is_active == 1).all()
+    cameras = db.query(Camera).filter(Camera.is_active == 1).all()
+
+    return {
+        "branches": [
+            {
+                "id": b.id,
+                "name": b.name,
+                "city": b.city,
+                "district": b.district,
+            }
+            for b in branches
+        ],
+        "cameras": [
+            {
+                "id": c.id,
+                "branch_id": c.branch_id,
+                "camera_name": c.camera_name,
+                "camera_code": c.camera_code,
+                "location_description": c.location_description,
+            }
+            for c in cameras
+        ],
+    }
+
+
 # ============================================================
 # Health Check
 # ============================================================

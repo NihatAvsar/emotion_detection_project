@@ -102,3 +102,49 @@ export async function saglikKontrolGetir() {
     return null;
   }
 }
+
+/**
+ * Dunku ozet verilerini getir (karsilastirma icin)
+ */
+export async function dunOzetGetir(kameraId = null) {
+  try {
+    const params = new URLSearchParams();
+    if (kameraId) params.set('camera_id', kameraId);
+
+    const yanit = await fetch(`${API_URL}/analytics/compare-yesterday?${params}`);
+    return await yanit.json();
+  } catch (hata) {
+    console.error('[API] Dun ozet alinamadi:', hata);
+    return null;
+  }
+}
+
+/**
+ * Saatlik duygu trendi verilerini getir
+ */
+export async function saatlikDuyguTrendGetir(tarih = null, kameraId = null) {
+  try {
+    const params = new URLSearchParams();
+    if (tarih) params.set('target_date', tarih);
+    if (kameraId) params.set('camera_id', kameraId);
+
+    const yanit = await fetch(`${API_URL}/analytics/emotion-hourly-trend?${params}`);
+    return await yanit.json();
+  } catch (hata) {
+    console.error('[API] Saatlik duygu trendi alinamadi:', hata);
+    return null;
+  }
+}
+
+/**
+ * Filtre seceneklerini getir (sube + kamera listesi)
+ */
+export async function filtreSeceneklerGetir() {
+  try {
+    const yanit = await fetch(`${API_URL}/analytics/filters`);
+    return await yanit.json();
+  } catch (hata) {
+    console.error('[API] Filtre secenekleri alinamadi:', hata);
+    return { branches: [], cameras: [] };
+  }
+}

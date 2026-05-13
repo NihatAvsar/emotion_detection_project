@@ -2,6 +2,13 @@
  * OturumTablosu Bileseni
  * =======================
  * Son oturumlari tablo formatinda gosterir.
+ * Her satirda Detay butonu ile modal acma destegi.
+ *
+ * Props:
+ *   oturumlar  — oturum listesi
+ *   onDetayAc  — detay modalini acma callback'i (oturum objesi gonderilir)
+ *   onExportCSV  — CSV export callback
+ *   onExportJSON — JSON export callback
  */
 
 const DUYGU_EMOJILERI = {
@@ -37,7 +44,7 @@ function durumRozeti(durum) {
   return <span className="durum-rozeti kapali">● Kapalı</span>;
 }
 
-export default function OturumTablosu({ oturumlar }) {
+export default function OturumTablosu({ oturumlar, onDetayAc, onExportCSV, onExportJSON }) {
   if (!oturumlar || oturumlar.length === 0) {
     return (
       <div className="glass-card">
@@ -59,6 +66,18 @@ export default function OturumTablosu({ oturumlar }) {
         <span className="icon">📋</span>
         <h2>Son Oturumlar</h2>
         <span className="face-count-badge">{oturumlar.length}</span>
+        <div className="tablo-export-butonlar">
+          {onExportCSV && (
+            <button className="export-btn" onClick={onExportCSV} title="CSV olarak indir">
+              📥 CSV
+            </button>
+          )}
+          {onExportJSON && (
+            <button className="export-btn" onClick={onExportJSON} title="JSON olarak indir">
+              📥 JSON
+            </button>
+          )}
+        </div>
       </div>
       <div className="card-body" style={{ padding: '8px' }}>
         <div className="tablo-kapsayici">
@@ -74,6 +93,7 @@ export default function OturumTablosu({ oturumlar }) {
                 <th>Güven</th>
                 <th>Tespit</th>
                 <th>Durum</th>
+                <th>İşlem</th>
               </tr>
             </thead>
             <tbody>
@@ -102,6 +122,17 @@ export default function OturumTablosu({ oturumlar }) {
                   </td>
                   <td className="tablo-tespit">{oturum.total_detections ?? '—'}</td>
                   <td>{durumRozeti(oturum.session_status)}</td>
+                  <td>
+                    {onDetayAc && (
+                      <button
+                        className="detay-btn"
+                        onClick={() => onDetayAc(oturum)}
+                        title="Oturum detayını göster"
+                      >
+                        🔍 Detay
+                      </button>
+                    )}
+                  </td>
                 </tr>
               ))}
             </tbody>
