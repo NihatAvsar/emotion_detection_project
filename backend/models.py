@@ -4,6 +4,7 @@ from sqlalchemy import Column, BigInteger, String, Integer, DateTime, ForeignKey
 from sqlalchemy.orm import relationship
 
 from database import Base
+from timezone_utils import istanbul_now
 
 
 class Business(Base):
@@ -14,8 +15,8 @@ class Business(Base):
     industry = Column(String(100), nullable=True)
     contact_email = Column(String(150), nullable=True)
     is_active = Column(Integer, default=1, nullable=False)
-    created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
-    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False)
+    created_at = Column(DateTime, default=istanbul_now, nullable=False)
+    updated_at = Column(DateTime, default=istanbul_now, onupdate=istanbul_now, nullable=False)
 
     branches = relationship("Branch", back_populates="business", cascade="all, delete-orphan")
     summaries = relationship("EmotionSummary", back_populates="business")
@@ -31,8 +32,8 @@ class Branch(Base):
     district = Column(String(100), nullable=True)
     address_line = Column(String(255), nullable=True)
     is_active = Column(Integer, default=1, nullable=False)
-    created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
-    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False)
+    created_at = Column(DateTime, default=istanbul_now, nullable=False)
+    updated_at = Column(DateTime, default=istanbul_now, onupdate=istanbul_now, nullable=False)
 
     business = relationship("Business", back_populates="branches")
     cameras = relationship("Camera", back_populates="branch", cascade="all, delete-orphan")
@@ -49,8 +50,8 @@ class Camera(Base):
     location_description = Column(String(255), nullable=True)
     stream_source = Column(String(255), nullable=True)
     is_active = Column(Integer, default=1, nullable=False)
-    created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
-    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False)
+    created_at = Column(DateTime, default=istanbul_now, nullable=False)
+    updated_at = Column(DateTime, default=istanbul_now, onupdate=istanbul_now, nullable=False)
 
     branch = relationship("Branch", back_populates="cameras")
     sessions = relationship("CustomerSession", back_populates="camera", cascade="all, delete-orphan")
@@ -64,7 +65,7 @@ class CustomerSession(Base):
     camera_id = Column(BigInteger, ForeignKey("cameras.id", ondelete="CASCADE"), nullable=False)
     tracked_face_id = Column(String(100), nullable=True)
     session_status = Column(String(20), default="active", nullable=False)
-    start_time = Column(DateTime, nullable=False)
+    start_time = Column(DateTime, nullable=False, index=True)
     end_time = Column(DateTime, nullable=True)
     last_seen_time = Column(DateTime, nullable=True)
     duration_seconds = Column(Integer, nullable=True)
@@ -73,8 +74,8 @@ class CustomerSession(Base):
     average_confidence = Column(Float, nullable=True)
     total_detections = Column(Integer, default=0, nullable=False)
     notes = Column(String(255), nullable=True)
-    created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
-    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False)
+    created_at = Column(DateTime, default=istanbul_now, nullable=False)
+    updated_at = Column(DateTime, default=istanbul_now, onupdate=istanbul_now, nullable=False)
 
     camera = relationship("Camera", back_populates="sessions")
     emotion_events = relationship("EmotionEvent", back_populates="session", cascade="all, delete-orphan")
@@ -85,14 +86,14 @@ class EmotionEvent(Base):
 
     id = Column(BigInteger, primary_key=True, autoincrement=True)
     session_id = Column(BigInteger, ForeignKey("customer_sessions.id", ondelete="CASCADE"), nullable=False)
-    detected_at = Column(DateTime, nullable=False)
+    detected_at = Column(DateTime, nullable=False, index=True)
     emotion_label = Column(String(50), nullable=False)
     confidence_score = Column(Float, nullable=False)
     bbox_x = Column(Integer, nullable=True)
     bbox_y = Column(Integer, nullable=True)
     bbox_width = Column(Integer, nullable=True)
     bbox_height = Column(Integer, nullable=True)
-    created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
+    created_at = Column(DateTime, default=istanbul_now, nullable=False)
 
     session = relationship("CustomerSession", back_populates="emotion_events")
 
@@ -119,8 +120,8 @@ class EmotionSummary(Base):
     positive_ratio = Column(Float, nullable=True)
     negative_ratio = Column(Float, nullable=True)
     neutral_ratio = Column(Float, nullable=True)
-    created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
-    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False)
+    created_at = Column(DateTime, default=istanbul_now, nullable=False)
+    updated_at = Column(DateTime, default=istanbul_now, onupdate=istanbul_now, nullable=False)
 
     business = relationship("Business", back_populates="summaries")
     branch = relationship("Branch", back_populates="summaries")

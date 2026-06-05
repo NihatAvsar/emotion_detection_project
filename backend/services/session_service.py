@@ -3,6 +3,8 @@ from dataclasses import dataclass, field # Veri sınıfları ve varsayılan alan
 from datetime import datetime # Zaman damgası ve süre ölçümü işlemleri için gerekli modül
 from typing import Dict, Tuple # Tip ipuçlarında sözlük (Dict) ve demet (Tuple) yapılarını tanımlamak için modüller
 
+from timezone_utils import istanbul_now # İstanbul saat dilimi yardımcı fonksiyonu
+
 from sqlalchemy.orm import Session # SQLAlchemy veritabanı oturum tipi yönetimi
 
 from models import CustomerSession, EmotionEvent # Müşteri seansı ve duygu olayı veritabanı modelleri
@@ -49,7 +51,7 @@ class SessionService: # Müşteri seans süreçlerini ve duygu analizi kayıtlar
         bbox: dict, # Yüzün anlık sınırlayıcı kutu koordinatları (x, y, width, height)
         detected_at: datetime | None = None, # Tespitin yapıldığı zaman (Verilmezse o anki zaman alınır)
     ):
-        detected_at = detected_at or datetime.utcnow() # Zaman damgası boşsa sistemin o anki UTC zamanını ata
+        detected_at = detected_at or istanbul_now() # Zaman damgası boşsa İstanbul saatini ata
         key = (camera_db_id, tracked_face_id) # Bellekte arama yapmak için Kamera ID ve Yüz ID birleşiminden benzersiz anahtar oluştur
 
         if key not in self.active_sessions: # Eğer bu yüz için bellekte henüz aktif bir seans tanımı yoksa (İlk defa görülüyor ise)
@@ -110,7 +112,7 @@ class SessionService: # Müşteri seans süreçlerini ve duygu analizi kayıtlar
             state.last_event_saved_at = detected_at # Bellekteki son olay kaydedilme zamanını güncel zamana çek
 
     def close_stale_sessions(self, db: Session, now: datetime | None = None): # Belirli süre işlem görmeyen (kamera odağından çıkan) seansları kapatan metot
-        now = now or datetime.utcnow() # Zaman damgası belirtilmemişse anlık UTC zamanını baz al
+        now = now or istanbul_now() # Zaman damgası belirtilmemişse anlık İstanbul zamanını baz al
         keys_to_close = [] # Kapatılması gereken seans anahtarlarının toplanacağı geçici liste
 
         for key, state in self.active_sessions.items(): # Bellekteki tüm aktif seansları sırayla incele

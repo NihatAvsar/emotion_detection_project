@@ -1,5 +1,7 @@
 from datetime import date, datetime, time, timedelta # Tarih ve zaman işlemleri için gerekli modüller
 
+from timezone_utils import istanbul_now # İstanbul saat dilimi yardımcı fonksiyonu
+
 from fastapi import APIRouter, Depends, Query # FastAPI yönlendirici, bağımlılık enjeksiyonu ve sorgu parametreleri
 from sqlalchemy import func # SQLAlchemy SQL fonksiyonları (count, avg, hour vb.)
 from sqlalchemy.orm import Session # SQLAlchemy veritabanı oturum tipi
@@ -17,7 +19,7 @@ def analytics_overview(
     camera_id: int | None = Query(None), # İsteğe bağlı kamera ID parametresi (Varsayılan: None)
     db: Session = Depends(get_db), # Veritabanı oturum bağımlılığı enjeksiyonu
 ):
-    day = target_date or datetime.utcnow().date() # Tarih belirtilmemişse bugünün UTC tarihini baz al
+    day = target_date or istanbul_now().date() # Tarih belirtilmemişse bugünün İstanbul tarihini baz al
     start_dt = datetime.combine(day, time.min) # Günün başlangıç saati (00:00:00)
     end_dt = start_dt + timedelta(days=1) # Bir sonraki günün başlangıcı (Ertesi gün 00:00:00)
 
@@ -86,7 +88,7 @@ def hourly_visits(
     camera_id: int | None = Query(None), # İsteğe bağlı kamera ID parametresi
     db: Session = Depends(get_db), # Veritabanı oturum bağımlılığı
 ):
-    day = target_date or datetime.utcnow().date() # Tarih seçilmediyse bugünün UTC tarihini kullan
+    day = target_date or istanbul_now().date() # Tarih seçilmediyse bugünün İstanbul tarihini kullan
     start_dt = datetime.combine(day, time.min) # Günün başlangıcı (00:00:00)
     end_dt = start_dt + timedelta(days=1) # Günün bitişi / sonraki günün başı (00:00:00)
 

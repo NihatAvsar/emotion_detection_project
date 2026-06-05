@@ -31,7 +31,7 @@ function zamanFormat(isoStr) {
   if (!isoStr) return '—';
   try {
     const tarih = new Date(isoStr);
-    return tarih.toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+    return tarih.toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit', second: '2-digit', timeZone: 'Europe/Istanbul' });
   } catch {
     return '—';
   }

@@ -2,6 +2,8 @@ from dataclasses import dataclass # Veri sınıfları oluşturmak için kullanı
 from datetime import datetime # Zaman damgası ve süre hesaplama işlemleri için kullanılan modül
 from typing import Dict, List # Tip ipuçlarında sözlük (Dict) ve liste (List) belirtmek için gerekli modüller
 
+from timezone_utils import istanbul_now # İstanbul saat dilimi yardımcı fonksiyonu
+
 
 @dataclass # Sadece veri tutma amacı taşıyan yapılar için dataclass dekoratörü
 class Track: # Takip edilen her bir yüz nesnesini temsil eden sınıf
@@ -55,7 +57,7 @@ class FaceTracker: # Kameralardan gelen yüz tespitlerini eşleştirip takip ede
             del camera_tracks[track_id] # Yüz nesnesini ilgili kameranın aktif takip listesinden tamamen kaldır
 
     def update(self, camera_code: str, detections: List[dict], now: datetime | None = None) -> List[dict]: # Yeni gelen yüz tespitleri ile takip durumunu güncelleyen ana metot
-        now = now or datetime.utcnow() # Eğer zaman damgası dışarıdan verilmediyse sistemin o anki UTC zamanını al
+        now = now or istanbul_now() # Eğer zaman damgası dışarıdan verilmediyse İstanbul saatini al
         self._cleanup_old_tracks(camera_code, now) # Tespit işlemlerine başlamadan önce eski/kaybolan yüzleri temizle
 
         camera_tracks = self.tracks_by_camera.setdefault(camera_code, {}) # İlgili kameranın güncel takip listesini referans al

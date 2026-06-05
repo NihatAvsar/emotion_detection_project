@@ -10,7 +10,8 @@
  *   models        — Model listesi [ { name, timm_name, input_size, loaded } ]
  */
 
-const SUNUCU_ADRESI = 'http://localhost:8000';
+const hostname = typeof window !== 'undefined' && window.location.hostname === 'localhost' ? '127.0.0.1' : (typeof window !== 'undefined' ? window.location.hostname : '127.0.0.1');
+const SUNUCU_ADRESI = `http://${hostname}:8000`;
 
 export default function ModelSelector({ selectedModel, onModelChange, models }) {
   return (

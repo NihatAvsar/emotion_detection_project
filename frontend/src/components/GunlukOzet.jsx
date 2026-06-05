@@ -115,7 +115,8 @@ export default function GunlukOzet({ ozet, saatlikVeri }) {
         <div className="gunluk-ozet-footer">
           <span className="gunluk-ozet-bilgi">
             📅 {new Date().toLocaleDateString('tr-TR', {
-              day: 'numeric', month: 'long', year: 'numeric'
+              day: 'numeric', month: 'long', year: 'numeric',
+              timeZone: 'Europe/Istanbul',
             })} — otomatik oluşturuldu
           </span>
         </div>

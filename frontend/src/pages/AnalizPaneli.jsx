@@ -268,7 +268,7 @@ export default function AnalizPaneli() {
           {/* Son güncelleme */}
           {sonGuncelleme && (
             <span className="son-guncelleme">
-              Son: {sonGuncelleme.toLocaleTimeString('tr-TR')}
+              Son: {sonGuncelleme.toLocaleTimeString('tr-TR', { timeZone: 'Europe/Istanbul' })}
             </span>
           )}
         </div>

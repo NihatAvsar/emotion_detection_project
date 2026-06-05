@@ -16,8 +16,9 @@ import ModelSelector from '../components/ModelSelector';
 import FaceListPanel from '../components/FaceListPanel';
 
 // ─── Sabitler ───
-const WS_URL = 'ws://localhost:8000/ws/predict';
-const API_URL = 'http://localhost:8000';
+const hostname = typeof window !== 'undefined' && window.location.hostname === 'localhost' ? '127.0.0.1' : (typeof window !== 'undefined' ? window.location.hostname : '127.0.0.1');
+const WS_URL = `ws://${hostname}:8000/ws/predict`;
+const API_URL = `http://${hostname}:8000`;
 const KARE_ARALIGI_MS = 83;
 const MAKS_GECMIS_NOKTASI = 360;
 

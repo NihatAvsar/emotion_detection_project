@@ -5,7 +5,8 @@
  * Her fonksiyon async/await ile calisiyor ve hata durumunda null dondurur.
  */
 
-const API_URL = 'http://localhost:8000';
+const hostname = typeof window !== 'undefined' && window.location.hostname === 'localhost' ? '127.0.0.1' : (typeof window !== 'undefined' ? window.location.hostname : '127.0.0.1');
+const API_URL = `http://${hostname}:8000`;
 
 /**
  * Model listesini getir

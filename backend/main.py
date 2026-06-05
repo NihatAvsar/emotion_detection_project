@@ -36,6 +36,8 @@ from dataclasses import dataclass, field
 from datetime import datetime, date, time as dt_time, timedelta
 from typing import Dict, List, Optional, Tuple
 
+from timezone_utils import istanbul_now
+
 import cv2
 import numpy as np
 from dotenv import load_dotenv
@@ -110,8 +112,8 @@ class Business(Base):
     industry = Column(String(100), nullable=True)
     contact_email = Column(String(150), nullable=True)
     is_active = Column(Integer, default=1, nullable=False)
-    created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
-    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False)
+    created_at = Column(DateTime, default=istanbul_now, nullable=False)
+    updated_at = Column(DateTime, default=istanbul_now, onupdate=istanbul_now, nullable=False)
 
     branches = relationship("Branch", back_populates="business")
 
@@ -126,8 +128,8 @@ class Branch(Base):
     district = Column(String(100), nullable=True)
     address_line = Column(String(255), nullable=True)
     is_active = Column(Integer, default=1, nullable=False)
-    created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
-    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False)
+    created_at = Column(DateTime, default=istanbul_now, nullable=False)
+    updated_at = Column(DateTime, default=istanbul_now, onupdate=istanbul_now, nullable=False)
 
     business = relationship("Business", back_populates="branches")
     cameras = relationship("Camera", back_populates="branch")
@@ -143,8 +145,8 @@ class Camera(Base):
     location_description = Column(String(255), nullable=True)
     stream_source = Column(String(255), nullable=True)
     is_active = Column(Integer, default=1, nullable=False)
-    created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
-    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False)
+    created_at = Column(DateTime, default=istanbul_now, nullable=False)
+    updated_at = Column(DateTime, default=istanbul_now, onupdate=istanbul_now, nullable=False)
 
     branch = relationship("Branch", back_populates="cameras")
     sessions = relationship("CustomerSession", back_populates="camera")
@@ -157,7 +159,7 @@ class CustomerSession(Base):
     camera_id = Column(BigInteger, ForeignKey("cameras.id", ondelete="CASCADE"), nullable=False)
     tracked_face_id = Column(String(100), nullable=True)
     session_status = Column(String(20), default="active", nullable=False)
-    start_time = Column(DateTime, nullable=False)
+    start_time = Column(DateTime, nullable=False, index=True)
     end_time = Column(DateTime, nullable=True)
     last_seen_time = Column(DateTime, nullable=True)
     duration_seconds = Column(Integer, nullable=True)
@@ -166,8 +168,8 @@ class CustomerSession(Base):
     average_confidence = Column(Float, nullable=True)
     total_detections = Column(Integer, default=0, nullable=False)
     notes = Column(String(255), nullable=True)
-    created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
-    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False)
+    created_at = Column(DateTime, default=istanbul_now, nullable=False)
+    updated_at = Column(DateTime, default=istanbul_now, onupdate=istanbul_now, nullable=False)
 
     camera = relationship("Camera", back_populates="sessions")
     emotion_events = relationship("EmotionEvent", back_populates="session")
@@ -178,14 +180,14 @@ class EmotionEvent(Base):
 
     id = Column(BigInteger, primary_key=True, autoincrement=True)
     session_id = Column(BigInteger, ForeignKey("customer_sessions.id", ondelete="CASCADE"), nullable=False)
-    detected_at = Column(DateTime, nullable=False)
+    detected_at = Column(DateTime, nullable=False, index=True)
     emotion_label = Column(String(50), nullable=False)
     confidence_score = Column(Float, nullable=False)
     bbox_x = Column(Integer, nullable=True)
     bbox_y = Column(Integer, nullable=True)
     bbox_width = Column(Integer, nullable=True)
     bbox_height = Column(Integer, nullable=True)
-    created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
+    created_at = Column(DateTime, default=istanbul_now, nullable=False)
 
     session = relationship("CustomerSession", back_populates="emotion_events")
 
@@ -253,7 +255,7 @@ class FaceTracker:
             del camera_tracks[track_id]
 
     def update(self, camera_code: str, detections: List[dict], now: Optional[datetime] = None) -> List[dict]:
-        now = now or datetime.utcnow()
+        now = now or istanbul_now()
         self._cleanup_old_tracks(camera_code, now)
 
         camera_tracks = self.tracks_by_camera.setdefault(camera_code, {})
@@ -338,7 +340,7 @@ class SessionService:
         bbox: dict,
         detected_at: Optional[datetime] = None,
     ):
-        detected_at = detected_at or datetime.utcnow()
+        detected_at = detected_at or istanbul_now()
         key = (camera_db_id, tracked_face_id)
 
         if key not in self.active_sessions:
@@ -399,7 +401,7 @@ class SessionService:
             state.last_event_saved_at = detected_at
 
     def close_stale_sessions(self, db: Session, now: Optional[datetime] = None):
-        now = now or datetime.utcnow()
+        now = now or istanbul_now()
         kapanacaklar = []
 
         for key, state in self.active_sessions.items():
@@ -694,10 +696,10 @@ def takip_ve_oturum_guncelle(
 ) -> dict:
     if not api_sonucu.get("success") or not api_sonucu.get("faces"):
         if db is not None:
-            session_service.close_stale_sessions(db=db, now=datetime.utcnow())
+            session_service.close_stale_sessions(db=db, now=istanbul_now())
         return api_sonucu
 
-    simdi = datetime.utcnow()
+    simdi = istanbul_now()
 
     takip_girdileri = []
     for yuz in api_sonucu["faces"]:
@@ -821,7 +823,7 @@ async def websocket_tahmin(websocket: WebSocket):
         print(f"[WebSocket] Hata: {e}")
     finally:
         try:
-            session_service.close_stale_sessions(db=db, now=datetime.utcnow() + timedelta(seconds=10))
+            session_service.close_stale_sessions(db=db, now=istanbul_now() + timedelta(seconds=10))
         except Exception:
             pass
         db.close()
@@ -872,7 +874,7 @@ def analytics_overview(
     camera_id: Optional[int] = Query(None),
     db: Session = Depends(get_db),
 ):
-    gun = target_date or datetime.utcnow().date()
+    gun = target_date or istanbul_now().date()
     baslangic = datetime.combine(gun, dt_time.min)
     bitis = baslangic + timedelta(days=1)
 
@@ -942,7 +944,7 @@ def hourly_visits(
     camera_id: Optional[int] = Query(None),
     db: Session = Depends(get_db),
 ):
-    gun = target_date or datetime.utcnow().date()
+    gun = target_date or istanbul_now().date()
     baslangic = datetime.combine(gun, dt_time.min)
     bitis = baslangic + timedelta(days=1)
 
@@ -1004,7 +1006,7 @@ def analytics_live(
     camera_id: Optional[int] = Query(None),
     db: Session = Depends(get_db),
 ):
-    session_service.close_stale_sessions(db=db, now=datetime.utcnow())
+    session_service.close_stale_sessions(db=db, now=istanbul_now())
 
     return {
         "active_customer_count": session_service.get_active_session_count(camera_id),
@@ -1021,7 +1023,7 @@ def analytics_compare_yesterday(
     Dunku ozet verilerini dondurur.
     Frontend bugun vs dun karsilastirmasi yapmak icin kullanir.
     """
-    dun = (datetime.utcnow() - timedelta(days=1)).date()
+    dun = (istanbul_now() - timedelta(days=1)).date()
     baslangic = datetime.combine(dun, dt_time.min)
     bitis = baslangic + timedelta(days=1)
 
@@ -1078,7 +1080,7 @@ def analytics_emotion_hourly_trend(
     Saatlik duygu kirilimi.
     Her saat icin hangi duygunun kac kez goruldugunu dondurur.
     """
-    gun = target_date or datetime.utcnow().date()
+    gun = target_date or istanbul_now().date()
     baslangic = datetime.combine(gun, dt_time.min)
     bitis = baslangic + timedelta(days=1)
 
